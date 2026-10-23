@@ -1,88 +1,787 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lampu Hidup</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      background: #222;
-      color: white;
-      font-family: sans-serif;
-    }
-    .container {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      gap: 20px;
-    }
-    .buttons {
-      display: flex;
-      gap: 10px;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Singularity - Simulasi Lubang Hitam 3D Interaktif</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
 
-    button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 1rem;
-      font-weight: bold;
-    }
-    .btn-hidup {
-      background-color: gold;
-      color: black;
-    }
-    .btn-mati {
-      background-color: #333;
-      color: white;
-    }
-    .box {
-      position: relative;
-      width: 400px;
-      height: 400px;
-      font-size: 5rem;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      border-radius: 15px;
-      overflow: hidden;
-      background-color: rgba(0,0,0,0.6); /* default: mati */
-      transition: background-color 0.4s ease;
-      color: white;
-    }
-  </style>
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #020205;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #d1d5db;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* HUD Overlay */
+        .hud-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 24px;
+        }
+
+        .interactive {
+            pointer-events: auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .title-block {
+            background: rgba(10, 12, 20, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 18px 24px;
+            max-width: 420px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .title-block h1 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #ffffff 0%, #ff9d00 50%, #ff3b00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .title-block p {
+            font-size: 13px;
+            line-height: 1.5;
+            color: #9ca3af;
+        }
+
+        .stats-badge {
+            display: inline-flex;
+            gap: 12px;
+            margin-top: 10px;
+            font-size: 11px;
+            font-family: monospace;
+            color: #38bdf8;
+        }
+
+        /* Panel Kontrol Kanan */
+        .control-panel {
+            background: rgba(10, 12, 20, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 20px;
+            width: 320px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .control-panel h2 {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #f3f4f6;
+            margin-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 8px;
+        }
+
+        .control-group {
+            margin-bottom: 14px;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 6px;
+            color: #cbd5e1;
+        }
+
+        .control-group label span {
+            color: #f97316;
+            font-family: monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 5px;
+            background: #27272a;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #f97316;
+            cursor: pointer;
+            box-shadow: 0 0 10px #f97316;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #f3f4f6;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background: rgba(249, 115, 22, 0.25);
+            border-color: #f97316;
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(249, 115, 22, 0.4);
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        /* Bilah Bawah & Info Penjelasan */
+        footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            background: rgba(10, 12, 20, 0.65);
+            padding: 6px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-tabs button {
+            background: transparent;
+            border: none;
+            padding: 8px 14px;
+            color: #94a3b8;
+        }
+
+        .nav-tabs button.active {
+            background: #f97316;
+            color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 0 12px rgba(249, 115, 22, 0.5);
+        }
+
+        .info-card {
+            background: rgba(10, 12, 20, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 16px 20px;
+            max-width: 440px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .info-card h3 {
+            color: #38bdf8;
+            font-size: 14px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Indikator Mouse */
+        .mouse-hint {
+            font-size: 11px;
+            color: #64748b;
+            text-align: right;
+            margin-top: 6px;
+            font-family: monospace;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="box" id="lampu">
-      👨‍👩‍👦‍👦
-    </div>
-    <div class="buttons">
-      <button class="btn-hidup" onclick="hidup()">Lampu Hidup</button>
-      <button class="btn-mati" onclick="mati()">Lampu Mati</button>
-    </div>
-  </div>
+    <div id="canvas-container"></div>
 
-  <script>
-    const lampu = document.getElementById("lampu");
-    function hidup() {
-        lampu.style.background = 'yellow';
-    }
-    function mati() {
-        lampu.style.background = 'black';
-    }
-    /* 
-      Task 1: Buat function hidup() untuk merubah background-color lampu menjadi warna: rgba(255, 255, 0, 0.4)
-      Task 2: Buat function mati() untuk merubah background-color lampu menjadi warna: rgba(0,0,0,0.6)
-    */
-  </script>
+    <div class="hud-layer">
+        <header>
+            <div class="title-block">
+                <h1>Gargantua 3D</h1>
+                <p>Simulasi fisika optik astrofisika interaktif piringan akresi materi relativistik dan distorsi ruang-waktu di sekitar lubang hitam supermasif.</p>
+                <div class="stats-badge">
+                    <span>M = 4.3 × 10⁶ M☉</span>
+                    <span>RS = 1.27 × 10⁷ KM</span>
+                </div>
+            </div>
+
+            <div class="control-panel interactive">
+                <h2>Parameter Simulasi</h2>
+                <div class="control-group">
+                    <label>Rotasi Akresi <span id="val-speed">1.0x</span></label>
+                    <input type="range" id="param-speed" min="0" max="3" step="0.1" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label>Intensitas Jet Polar <span id="val-jet">1.0</span></label>
+                    <input type="range" id="param-jet" min="0" max="2" step="0.1" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label>Suhu Termal Disk <span id="val-temp">Panas</span></label>
+                    <input type="range" id="param-temp" min="0" max="2" step="1" value="1">
+                </div>
+                <div class="btn-grid">
+                    <button id="btn-audio">🔊 Suara: Mati</button>
+                    <button id="btn-reset">Reset Sudut</button>
+                </div>
+            </div>
+        </header>
+
+        <footer>
+            <div class="interactive">
+                <div class="nav-tabs">
+                    <button class="active" onclick="switchPerspective(0)">Piringan Akresi</button>
+                    <button onclick="switchPerspective(1)">Event Horizon</button>
+                    <button onclick="switchPerspective(2)">Kutub & Jet</button>
+                    <button onclick="switchPerspective(3)">Jarak Orbit Jauh</button>
+                </div>
+                <div class="mouse-hint">DRAG: Putar 360° | SCROLL: Zoom In/Out | KLIK KANAN: Pan</div>
+            </div>
+
+            <div class="info-card">
+                <h3 id="info-title">Piringan Akresi (Accretion Disk)</h3>
+                <p id="info-desc">Gas dan debu kosmis yang terperangkap berputar mendekati kecepatan cahaya, menghasilkan gesekan ekstrem serta radiasi sinar-X dan spektrum cahaya yang sangat benderang sebelum tertelan selamanya.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Pustaka Three.js dan OrbitControls dari CDN Resmi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        /* ----------------------------------------------------
+         * 1. INISIALISASI SCENE, KAMERA, & ENGINE THREE.JS
+         * ---------------------------------------------------- */
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x020205, 0.0015);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.set(0, 16, 42);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.25;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 8;
+        controls.maxDistance = 150;
+        controls.maxPolarAngle = Math.PI - 0.05;
+
+        /* ----------------------------------------------------
+         * 2. GENERATOR TEKSTUR PARTIKEL SECARA DINAMIS (CANVAS)
+         * ---------------------------------------------------- */
+        function createGlowTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.2, 'rgba(255, 200, 120, 0.8)');
+            gradient.addColorStop(0.6, 'rgba(255, 80, 20, 0.2)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 64, 64);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const particleTexture = createGlowTexture();
+
+        /* ----------------------------------------------------
+         * 3. LUBANG HITAM (EVENT HORIZON & PHOTON SPHERE)
+         * ---------------------------------------------------- */
+        // Bola hitam pekat absolut yang menyerap seluruh cahaya
+        const eventHorizonRadius = 4.2;
+        const eventHorizonGeo = new THREE.SphereGeometry(eventHorizonRadius, 64, 64);
+        const eventHorizonMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const eventHorizon = new THREE.Mesh(eventHorizonGeo, eventHorizonMat);
+        scene.add(eventHorizon);
+
+        // Cincin Foton / Gravitational Lensing Aura (Halo pembelokan cahaya di tepi)
+        const photonGlowGeo = new THREE.RingGeometry(eventHorizonRadius, eventHorizonRadius + 0.8, 64);
+        const photonGlowMat = new THREE.ShaderMaterial({
+            side: THREE.DoubleSide,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            uniforms: {
+                time: { value: 0.0 },
+                color: { value: new THREE.Color(0xffaa44) }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform vec3 color;
+                varying vec2 vUv;
+                void main() {
+                    float dist = distance(vUv, vec2(0.5));
+                    float alpha = smoothstep(0.5, 0.0, dist) * 0.9;
+                    gl_FragColor = vec4(color * 1.5, alpha);
+                }
+            `
+        });
+        const photonGlow = new THREE.Mesh(photonGlowGeo, photonGlowMat);
+        scene.add(photonGlow);
+
+        /* ----------------------------------------------------
+         * 4. SISTEM PARTIKEL PIRINGAN AKRESI (ACCRETION DISK)
+         * ---------------------------------------------------- */
+        const diskParticleCount = 85000;
+        const diskGeometry = new THREE.BufferGeometry();
+        const diskPositions = new Float32Array(diskParticleCount * 3);
+        const diskColors = new Float32Array(diskParticleCount * 3);
+        const diskRadii = new Float32Array(diskParticleCount);
+        const diskAngles = new Float32Array(diskParticleCount);
+        const diskSpeeds = new Float32Array(diskParticleCount);
+        const diskVerticalOffsets = new Float32Array(diskParticleCount);
+
+        const innerRadius = 5.2;
+        const outerRadius = 26.0;
+
+        for (let i = 0; i < diskParticleCount; i++) {
+            // Distribusi lebih padat di dekat cincin dalam
+            const exp = Math.pow(Math.random(), 1.8);
+            const r = innerRadius + exp * (outerRadius - innerRadius);
+            const theta = Math.random() * Math.PI * 2;
+
+            diskRadii[i] = r;
+            diskAngles[i] = theta;
+
+            // Kecepatan orbit Keplerian (makin dekat lubang hitam, makin cepat berputar)
+            diskSpeeds[i] = (1.0 / Math.sqrt(r)) * 1.6;
+
+            // Ketebalan piringan bertambah di bagian luar (flare effect)
+            const thickness = 0.12 * (r - innerRadius) + 0.1;
+            diskVerticalOffsets[i] = (Math.random() - 0.5) * thickness;
+
+            diskPositions[i * 3] = r * Math.cos(theta);
+            diskPositions[i * 3 + 1] = diskVerticalOffsets[i];
+            diskPositions[i * 3 + 2] = r * Math.sin(theta);
+
+            // Gradasi warna suhu (biru-putih sangat panas di dalam -> oranye/merah di luar)
+            const t = (r - innerRadius) / (outerRadius - innerRadius);
+            let color = new THREE.Color();
+            if (t < 0.15) {
+                color.setHSL(0.55 - t * 0.5, 1.0, 0.85); // Putih kebiruan super panas
+            } else if (t < 0.6) {
+                color.setHSL(0.12 - (t - 0.15) * 0.15, 1.0, 0.6); // Oranye menyala
+            } else {
+                color.setHSL(0.02, 1.0, 0.25 + (1.0 - t) * 0.3); // Merah tua dingin
+            }
+
+            diskColors[i * 3] = color.r;
+            diskColors[i * 3 + 1] = color.g;
+            diskColors[i * 3 + 2] = color.b;
+        }
+
+        diskGeometry.setAttribute('position', new THREE.BufferAttribute(diskPositions, 3));
+        diskGeometry.setAttribute('color', new THREE.BufferAttribute(diskColors, 3));
+
+        const diskMaterial = new THREE.PointsMaterial({
+            size: 0.38,
+            map: particleTexture,
+            vertexColors: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            transparent: true,
+            opacity: 0.85
+        });
+
+        const accretionDisk = new THREE.Points(diskGeometry, diskMaterial);
+        scene.add(accretionDisk);
+
+        /* ----------------------------------------------------
+         * 5. SEMBURAN JET RELATIVISTIK POLAR (RELATIVISTIC JETS)
+         * ---------------------------------------------------- */
+        const jetCount = 7000;
+        const jetGeometry = new THREE.BufferGeometry();
+        const jetPositions = new Float32Array(jetCount * 3);
+        const jetColors = new Float32Array(jetCount * 3);
+        const jetVelocities = [];
+
+        for (let i = 0; i < jetCount; i++) {
+            const isNorth = Math.random() > 0.5;
+            const direction = isNorth ? 1 : -1;
+            const height = Math.random() * 38;
+            const spread = (height * 0.12 + 0.1) * Math.random();
+            const angle = Math.random() * Math.PI * 2;
+
+            const x = Math.cos(angle) * spread;
+            const z = Math.sin(angle) * spread;
+            const y = (height + 3.8) * direction;
+
+            jetPositions[i * 3] = x;
+            jetPositions[i * 3 + 1] = y;
+            jetPositions[i * 3 + 2] = z;
+
+            jetVelocities.push({
+                speedY: (0.35 + Math.random() * 0.4) * direction,
+                initY: 3.8 * direction,
+                maxY: 42.0 * direction,
+                direction: direction
+            });
+
+            // Warna energi plasma partikel subatomik (cyan / deep electric violet)
+            const jetColor = new THREE.Color().setHSL(0.55 + Math.random() * 0.15, 0.9, 0.7);
+            jetColors[i * 3] = jetColor.r;
+            jetColors[i * 3 + 1] = jetColor.g;
+            jetColors[i * 3 + 2] = jetColor.b;
+        }
+
+        jetGeometry.setAttribute('position', new THREE.BufferAttribute(jetPositions, 3));
+        jetGeometry.setAttribute('color', new THREE.BufferAttribute(jetColors, 3));
+
+        const jetMaterial = new THREE.PointsMaterial({
+            size: 0.45,
+            map: particleTexture,
+            vertexColors: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            transparent: true,
+            opacity: 0.75
+        });
+
+        const relativisticJets = new THREE.Points(jetGeometry, jetMaterial);
+        scene.add(relativisticJets);
+
+        /* ----------------------------------------------------
+         * 6. LATAR BELAKANG BINTANG KOSMIS DEEP SPACE
+         * ---------------------------------------------------- */
+        const starsCount = 12000;
+        const starsGeometry = new THREE.BufferGeometry();
+        const starPositions = new Float32Array(starsCount * 3);
+        const starColors = new Float32Array(starsCount * 3);
+
+        for (let i = 0; i < starsCount; i++) {
+            // Sebar dalam bola radius besar
+            const u = Math.random();
+            const v = Math.random();
+            const theta = u * 2.0 * Math.PI;
+            const phi = Math.acos(2.0 * v - 1.0);
+            const r = 350 + Math.random() * 650;
+
+            const sinPhi = Math.sin(phi);
+            starPositions[i * 3] = r * sinPhi * Math.cos(theta);
+            starPositions[i * 3 + 1] = r * sinPhi * Math.sin(theta);
+            starPositions[i * 3 + 2] = r * Math.cos(phi);
+
+            const starColor = new THREE.Color();
+            const roll = Math.random();
+            if (roll > 0.8) starColor.setHex(0xaec7ff); // Bintang biru muda
+            else if (roll > 0.6) starColor.setHex(0xffdfb8); // Bintang oranye hangat
+            else starColor.setHex(0xffffff); // Bintang putih terang
+
+            starColors[i * 3] = starColor.r;
+            starColors[i * 3 + 1] = starColor.g;
+            starColors[i * 3 + 2] = starColor.b;
+        }
+
+        starsGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        starsGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+
+        const starsMaterial = new THREE.PointsMaterial({
+            size: 1.2,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.9
+        });
+
+        const starField = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(starField);
+
+        /* ----------------------------------------------------
+         * 7. SOUND GENERATOR PROSEDURAL (WEB AUDIO API)
+         * ---------------------------------------------------- */
+        let audioCtx = null;
+        let isAudioPlaying = false;
+        let masterGain = null;
+        let subOsc = null;
+        let noiseNode = null;
+
+        function initAudio() {
+            if (audioCtx) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+
+            masterGain = audioCtx.createGain();
+            masterGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+            masterGain.connect(audioCtx.destination);
+
+            // Sub-drone bass getaran frekuensi sangat rendah (45Hz)
+            subOsc = audioCtx.createOscillator();
+            subOsc.type = 'sine';
+            subOsc.frequency.setValueAtTime(45, audioCtx.currentTime);
+
+            const subGain = audioCtx.createGain();
+            subGain.gain.value = 0.55;
+            subOsc.connect(subGain);
+            subGain.connect(masterGain);
+            subOsc.start();
+
+            // Desisan turbulensi partikel piringan akresi (Filtered Brown Noise)
+            const bufferSize = audioCtx.sampleRate * 2;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            let lastOut = 0.0;
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                output[i] = (lastOut + (0.02 * white)) / 1.02;
+                lastOut = output[i];
+                output[i] *= 3.5;
+            }
+
+            noiseNode = audioCtx.createBufferSource();
+            noiseNode.buffer = noiseBuffer;
+            noiseNode.loop = true;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(180, audioCtx.currentTime);
+
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.value = 0.35;
+
+            noiseNode.connect(filter);
+            filter.connect(noiseGain);
+            noiseGain.connect(masterGain);
+            noiseNode.start();
+        }
+
+        const btnAudio = document.getElementById('btn-audio');
+        btnAudio.addEventListener('click', () => {
+            if (!audioCtx) initAudio();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            isAudioPlaying = !isAudioPlaying;
+            if (isAudioPlaying) {
+                masterGain.gain.setTargetAtTime(0.3, audioCtx.currentTime, 1.2);
+                btnAudio.textContent = '🔊 Suara: Aktif';
+                btnAudio.style.borderColor = '#22c55e';
+            } else {
+                masterGain.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.6);
+                btnAudio.textContent = '🔇 Suara: Mati';
+                btnAudio.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+            }
+        });
+
+        /* ----------------------------------------------------
+         * 8. KONTROL INTERAKTIF & PRESET SUDUT KAMERA
+         * ---------------------------------------------------- */
+        let speedMultiplier = 1.0;
+        let jetMultiplier = 1.0;
+
+        document.getElementById('param-speed').addEventListener('input', (e) => {
+            speedMultiplier = parseFloat(e.target.value);
+            document.getElementById('val-speed').textContent = speedMultiplier.toFixed(1) + 'x';
+        });
+
+        document.getElementById('param-jet').addEventListener('input', (e) => {
+            jetMultiplier = parseFloat(e.target.value);
+            document.getElementById('val-jet').textContent = jetMultiplier.toFixed(1);
+            relativisticJets.material.opacity = 0.75 * jetMultiplier;
+        });
+
+        document.getElementById('param-temp').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            const label = document.getElementById('val-temp');
+            const colors = diskGeometry.attributes.color.array;
+
+            if (val === 0) {
+                label.textContent = 'Dingin';
+                for (let i = 0; i < diskParticleCount; i++) {
+                    const r = diskRadii[i];
+                    const t = (r - innerRadius) / (outerRadius - innerRadius);
+                    const c = new THREE.Color().setHSL(0.02 + t * 0.08, 0.9, 0.4);
+                    colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+                }
+            } else if (val === 1) {
+                label.textContent = 'Panas';
+                for (let i = 0; i < diskParticleCount; i++) {
+                    const r = diskRadii[i];
+                    const t = (r - innerRadius) / (outerRadius - innerRadius);
+                    const c = new THREE.Color().setHSL(0.55 - t * 0.5, 1.0, 0.7);
+                    colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+                }
+            } else {
+                label.textContent = 'Hipertermal';
+                for (let i = 0; i < diskParticleCount; i++) {
+                    const r = diskRadii[i];
+                    const t = (r - innerRadius) / (outerRadius - innerRadius);
+                    const c = new THREE.Color().setHSL(0.65 - t * 0.2, 0.9, 0.85);
+                    colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+                }
+            }
+            diskGeometry.attributes.color.needsUpdate = true;
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            switchPerspective(0);
+        });
+
+        // Pengaturan Kamera Lerp & Deskripsi Tab
+        let targetCamPos = new THREE.Vector3(0, 16, 42);
+        let targetLookAt = new THREE.Vector3(0, 0, 0);
+
+        const perspectives = [
+            {
+                pos: new THREE.Vector3(0, 16, 42),
+                title: "Piringan Akresi (Accretion Disk)",
+                desc: "Gas dan debu kosmis yang terperangkap berputar mendekati kecepatan cahaya, menghasilkan gesekan ekstrem serta radiasi spektrum cahaya yang sangat benderang sebelum tertelan selamanya."
+            },
+            {
+                pos: new THREE.Vector3(0, 1.5, 12),
+                title: "Event Horizon & Photon Ring",
+                desc: "Cakrawala peristiwa adalah batas tanpa jalan kembali. Cahaya di sekitarnya tertekuk oleh medan gravitasi masif membentuk cincin foton sempurna yang melingkari singularitas."
+            },
+            {
+                pos: new THREE.Vector3(1.0, 48, 4.0),
+                title: "Kutub Gravitasi & Jet Relativistik",
+                desc: "Garis medan magnetik yang terpilin di sumbu putar melontarkan sinar radiasi berenergi sangat tinggi jutaan kilometer ke luar angkasa dalam kecepatan fraksi cahaya."
+            },
+            {
+                pos: new THREE.Vector3(-60, 35, 75),
+                title: "Jarak Orbit Makro Kosmis",
+                desc: "Pengamatan jarak jauh memperlihatkan distorsi gravitasi terhadap bintang-bintang di latar belakang alam semesta melalui efek lensa gravitasi (Einstein Ring)."
+            }
+        ];
+
+        window.switchPerspective = function(index) {
+            const btns = document.querySelectorAll('.nav-tabs button');
+            btns.forEach((b, idx) => {
+                b.classList.toggle('active', idx === index);
+            });
+
+            targetCamPos.copy(perspectives[index].pos);
+            document.getElementById('info-title').textContent = perspectives[index].title;
+            document.getElementById('info-desc').textContent = perspectives[index].desc;
+        };
+
+        /* ----------------------------------------------------
+         * 9. SIKLUS ANIMASI UTAMA & LOGIKA FISIKA FRAME
+         * ---------------------------------------------------- */
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const elapsedTime = clock.getElapsedTime();
+
+            // Rotasi Piringan Akresi
+            const diskPosArr = diskGeometry.attributes.position.array;
+            const effectiveSpeed = delta * 0.7 * speedMultiplier;
+
+            for (let i = 0; i < diskParticleCount; i++) {
+                diskAngles[i] += diskSpeeds[i] * effectiveSpeed;
+                const r = diskRadii[i];
+                const theta = diskAngles[i];
+
+                diskPosArr[i * 3] = r * Math.cos(theta);
+                diskPosArr[i * 3 + 2] = r * Math.sin(theta);
+            }
+            diskGeometry.attributes.position.needsUpdate = true;
+
+            // Aliran Jet Relativistik
+            if (jetMultiplier > 0.05) {
+                const jetPosArr = jetGeometry.attributes.position.array;
+                for (let i = 0; i < jetCount; i++) {
+                    const vel = jetVelocities[i];
+                    jetPosArr[i * 3 + 1] += vel.speedY * jetMultiplier;
+
+                    if (vel.direction === 1 && jetPosArr[i * 3 + 1] > vel.maxY) {
+                        jetPosArr[i * 3 + 1] = vel.initY;
+                    } else if (vel.direction === -1 && jetPosArr[i * 3 + 1] < vel.maxY) {
+                        jetPosArr[i * 3 + 1] = vel.initY;
+                    }
+                }
+                jetGeometry.attributes.position.needsUpdate = true;
+            }
+
+            // Animasi Cincin Foton Lensing
+            photonGlow.lookAt(camera.position);
+            photonGlowMat.uniforms.time.value = elapsedTime;
+
+            // Rotasi halimun bintang secara konstan
+            starField.rotation.y = elapsedTime * 0.003;
+
+            // Transisi posisi kamera halus (smooth slerp/lerp)
+            camera.position.lerp(targetCamPos, 0.035);
+            controls.update();
+
+            renderer.render(scene, camera);
+        }
+
+        // Responsivitas Viewport Peramban
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Jalankan animasi
+        animate();
+    </script>
 </body>
 </html>
